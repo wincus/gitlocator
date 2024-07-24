@@ -181,7 +181,6 @@ func parseGithubURI(uri string) (string, string, string) {
 
 // getGitHubURL returns the URL to a file in a GitHub repository.
 func getGitHubURL(host, org, repo, branch, path string) string {
-	host = strings.Replace(host, "-ssh.", ".", 1)
 	return fmt.Sprintf("https://%s/%s/%s/tree/%s/%s", host, org, curateRepo(repo), branch, path)
 }
 
@@ -194,6 +193,8 @@ func parseGitlabURI(uri string) (string, string, string) {
 
 // getGitLabURL returns the URL to a file in a GitLab repository.
 func getGitLabURL(host, group, project, branch, path string) string {
+	// replace -ssh with . in host
+	host = strings.Replace(host, "-ssh.", ".", 1)
 	return fmt.Sprintf("https://%s/%s/%s/-/tree/%s/%s", host, group, project, branch, path)
 }
 
