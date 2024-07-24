@@ -15,11 +15,11 @@ func TestParseGithubURI(t *testing.T) {
 		want output
 	}{
 		{
-			uri: "git@github.com:miroapp-dev/miro-infra-stack.git",
+			uri: "git@github.com:org-dev/infra.git",
 			want: output{
 				host: "github.com",
-				org:  "miroapp-dev",
-				repo: "miro-infra-stack",
+				org:  "org-dev",
+				repo: "infra",
 			},
 		},
 		{
