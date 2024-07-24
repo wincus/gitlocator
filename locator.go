@@ -136,151 +136,12 @@ func getRepoType(uri string) OriginType {
 		return OriginTypeGitLab
 	}
 
+	if strings.Contains(uri, "gitlab-ssh") {
+		return OriginTypeGitLab
+	}
+
 	return OriginTypeUnknown
 }
-
-// func NewGitLocator(wd string) (GitLocation, error) {
-
-// 	localRepoPath, err := getRepoPath(wd)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	repo, err := git.PlainOpen(localRepoPath)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	remote, err := repo.Remote(GitRemote)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if remote == nil || len(remote.Config().URLs) == 0 {
-// 		return nil, fmt.Errorf("remote repository not found")
-// 	}
-
-// 	remoteURL := remote.Config().URLs[0]
-
-// 	// if !matchesScheme(remoteURL) {
-// 	// 	return nil, fmt.Errorf("unsupported remote URL scheme")
-// 	// }
-
-// 	if !matchesScpLike(remoteURL) {
-// 		return nil, fmt.Errorf("unsupported remote URL format")
-// 	}
-
-// 	_, host, port, remotePath := findScpLikeComponents(remote.Config().URLs[0])
-
-// 	head, err := repo.Head()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	branch := head.Name().Short()
-
-// 	// check repo status in case is dirty
-// 	wt, err := repo.Worktree()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	status, err := wt.Status()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return &GitLocation{
-// 		isClean:          status.IsClean(),
-// 		remote:           remote,
-// 		scheme:           "https",
-// 		branch:           branch,
-// 		localRepoSubPath: getSubDirectory(localRepoPath, wd),
-// 		localRepoPath:    localRepoPath,
-// 		host:             host,
-// 		port:             port,
-// 		remotePath:       remotePath,
-// 	}, nil
-// }
-
-// func NewGitLocal(wd string) (*GitLocal, error) {
-
-// 	localRepoPath, err := getRepoPath(wd)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	repo, err := git.PlainOpen(localRepoPath)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	remote, err := repo.Remote(GitRemote)
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	if remote == nil || len(remote.Config().URLs) == 0 {
-// 		return nil, fmt.Errorf("remote repository not found")
-// 	}
-
-// 	remoteURL := remote.Config().URLs[0]
-
-// 	// if !matchesScheme(remoteURL) {
-// 	// 	return nil, fmt.Errorf("unsupported remote URL scheme")
-// 	// }
-
-// 	if !matchesScpLike(remoteURL) {
-// 		return nil, fmt.Errorf("unsupported remote URL format")
-// 	}
-
-// 	_, _, _, remotePath := findScpLikeComponents(remote.Config().URLs[0])
-
-// 	head, err := repo.Head()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	branch := head.Name().Short()
-
-// 	// check repo status in case is dirty
-// 	wt, err := repo.Worktree()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	status, err := wt.Status()
-
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return &GitLocal{
-// 		origin:  OriginTypeUnknown,
-// 		wd:      wd,
-
-// func (g *GitLocation) String() string {
-// 	return fmt.Sprintf("GitLocation{scheme: %s, host: %s, port: %s, org: %s, branch: %s, repoPath: %s, path: %s, isClean: %t}", g.scheme, g.host, g.port, g.org, g.branch, g.localRepoPath, g.localRepoSubPath, g.isClean)
-// }
-
-// func (g *GitLocation) GetURL() string {
-// 	return fmt.Sprintf("%s://%s/%s/tree%s/%s", g.scheme, g.host, g.org, g.branch, g.localRepoSubPath)
-// }
-
-// func (g *GitLocation) IsClean() bool {
-// 	return g.isClean
-// }
 
 // getRepoPath looks for a git repository in the current working directory
 // or any of its parent directories.
@@ -310,79 +171,32 @@ func getSubDirectory(root, path string) string {
 	return strings.TrimPrefix(path[len(root):], "/")
 }
 
+// parseGithubURI extracts the host, organization and repository name from a github
+// repository URI.
 func parseGithubURI(uri string) (string, string, string) {
-
-	// needs to be fixed
-	scpLikeUrlRegExp := regexp.MustCompile(`^(?:(?P<user>[^@]+)@)?(?P<host>[^:\s]+):(?:(?P<port>[0-9]{1,5}):)?(?P<path>[^\\].*)$`)
-	m := scpLikeUrlRegExp.FindStringSubmatch(uri)
+	regex := regexp.MustCompile(`(?:git@|https://)(?P<host>[^:/]+)[:/](?P<org>[^/]+)/(?P<repo>[^.]+)(?:\.git)?`)
+	m := regex.FindStringSubmatch(uri)
 	return m[1], m[2], m[3]
 }
 
+// getGitHubURL returns the URL to a file in a GitHub repository.
 func getGitHubURL(host, org, repo, branch, path string) string {
-	return fmt.Sprintf("https://%s/%s/%s/tree/%s/%s", host, org, repo, branch, path)
+	return fmt.Sprintf("https://%s/%s/%s/tree/%s/%s", host, org, curateRepo(repo), branch, path)
 }
 
+// parseGitlabURI extracts the host, group and project name from a gitlab repository URI.
 func parseGitlabURI(uri string) (string, string, string) {
-
-	// needs to be fixed
-	scpLikeUrlRegExp := regexp.MustCompile(`^(?:(?P<user>[^@]+)@)?(?P<host>[^:\s]+):(?:(?P<port>[0-9]{1,5}):)?(?P<path>[^\\].*)$`)
-	m := scpLikeUrlRegExp.FindStringSubmatch(uri)
-
+	regex := regexp.MustCompile(`(?:git@|https://)(?P<host>[^:/]+)[:/](?P<org>[^/]+)/(?P<repo>[^.]+)(?:\.git)?`)
+	m := regex.FindStringSubmatch(uri)
 	return m[1], m[2], m[3]
 }
 
+// getGitLabURL returns the URL to a file in a GitLab repository.
 func getGitLabURL(host, group, project, branch, path string) string {
 	return fmt.Sprintf("https://%s/%s/%s/-/tree/%s/%s", host, group, project, branch, path)
 }
 
-// // copied from go-git internal implementation
-
-// var (
-// 	isSchemeRegExp = regexp.MustCompile(`^[^:]+://`)
-// 	// Ref: https://github.com/git/git/blob/master/Documentation/urls.txt#L37
-// 	scpLikeUrlRegExp = regexp.MustCompile(`^(?:(?P<user>[^@]+)@)?(?P<host>[^:\s]+):(?:(?P<port>[0-9]{1,5}):)?(?P<path>[^\\].*)$`)
-// )
-
-// // matchesScheme returns true if the given string matches a URL-like
-// // format scheme.
-// func matchesScheme(url string) bool {
-// 	return isSchemeRegExp.MatchString(url)
-// }
-
-// // matchesScpLike returns true if the given string matches an SCP-like
-// // format scheme.
-// func matchesScpLike(url string) bool {
-// 	return scpLikeUrlRegExp.MatchString(url)
-// }
-
-// // findScpLikeComponents returns the user, host, port and path of the
-// // given SCP-like URL.
-// func findScpLikeComponents(url string) (user, host, port, path string) {
-// 	m := scpLikeUrlRegExp.FindStringSubmatch(url)
-// 	return m[1], m[2], m[3], m[4]
-// }
-
-// func getOriginType(g *git.Repository) OriginType {
-
-// 	remote, err := g.Remote(GitRemote)
-
-// 	if err != nil {
-// 		return OriginTypeUnknown
-// 	}
-
-// 	if len(remote.Config().URLs) == 0 {
-// 		return OriginTypeUnknown
-// 	}
-
-// 	remoteURL := remote.Config().URLs[0]
-
-// 	if strings.Contains(remoteURL, "github.com") {
-// 		return OriginTypeGitHub
-// 	}
-
-// 	if strings.Contains(remoteURL, "gitlab.com") {
-// 		return OriginTypeGitLab
-// 	}
-
-// 	return OriginTypeUnknown
-// }
+// curate repo
+func curateRepo(repo string) string {
+	return strings.TrimSuffix(repo, ".git")
+}

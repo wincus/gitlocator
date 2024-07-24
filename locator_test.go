@@ -55,9 +55,9 @@ func TestParseGitlabURI(t *testing.T) {
 		want output
 	}{
 		{
-			uri: "git@gitlab-ssh.tools.devrtb.com:devops/iac.git",
+			uri: "git@gitlab-ssh.domain.com:devops/iac.git",
 			want: output{
-				host:    "gitlab.tools.devrtb.com",
+				host:    "gitlab-ssh.domain.com",
 				group:   "devops",
 				project: "iac",
 			},
@@ -66,7 +66,7 @@ func TestParseGitlabURI(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.uri, func(t *testing.T) {
-			host, group, project := parseGithubURI(tt.uri)
+			host, group, project := parseGitlabURI(tt.uri)
 			if host != tt.want.host || group != tt.want.group || project != tt.want.project {
 				t.Errorf("got: %s, %s, %s, want: %s, %s, %s", host, group, project, tt.want.host, tt.want.group, tt.want.project)
 			}
